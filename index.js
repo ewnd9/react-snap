@@ -722,7 +722,7 @@ const run = async (userOptions, { fs } = { fs: nativeFs }) => {
       }
       if (options.asyncScriptTags) await asyncScriptTags({ page });
 
-      await page.evaluate(ajaxCache => {
+      await page.evaluate(({ ajaxCache, options }) => {
         const snapEscape = (() => {
           const UNSAFE_CHARS_REGEXP = /[<>\/\u2028\u2029]/g;
           // Mapping of unsafe HTML and invalid JavaScript line terminator chars to their
@@ -743,6 +743,8 @@ const run = async (userOptions, { fs } = { fs: nativeFs }) => {
         const snapStringify = obj => snapEscape(JSON.stringify(obj));
 
         let scriptTagText = "";
+        scriptTagText += `window.__snapPrerender__=${snapStringify({viewport: options.viewport})};`;
+
         if (ajaxCache && Object.keys(ajaxCache).length > 0) {
           scriptTagText += `window.snapStore=${snapEscape(
             JSON.stringify(ajaxCache)
@@ -765,7 +767,7 @@ const run = async (userOptions, { fs } = { fs: nativeFs }) => {
           const firstScript = Array.from(document.scripts)[0];
           firstScript.parentNode.insertBefore(scriptTag, firstScript);
         }
-      }, ajaxCache[route]);
+      }, { ajaxCache: ajaxCache[route], options });
       delete ajaxCache[route];
       if (options.fixInsertRule) await fixInsertRule({ page });
       await fixFormFields({ page });
